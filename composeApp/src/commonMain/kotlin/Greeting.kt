@@ -15,17 +15,17 @@ object PlatFormUtils {
         return platform.name.startsWith("Android")
     }
 
-    fun androidDownloadFile(fileName: String) {
+    fun androidDownloadFile(userName: String, fileName: String) {
         if (isAndroid()) {
-            platform.downloadFile(fileName)
+            platform.downloadFile(userName, fileName)
         }
     }
 
 
-    fun androidUploadFilePath(fileName: String): String {
-        return if (isAndroid()) {
-            platform.filePath(fileName)
-        } else ""
+    fun androidUploadFile(fileName: String, targetUserName: String) {
+        if (isAndroid()) {
+            platform.uploadFile(fileName, targetUserName)
+        }
     }
 
     fun androidDownloadPath(): String {

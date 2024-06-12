@@ -27,18 +27,18 @@ fun LoginPage(username: MutableState<String> , page: MutableState<Page>) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        val ipAddress = remember {
-            mutableStateOf("")
-        }
+//        val ipAddress = remember {
+//            mutableStateOf("")
+//        }
 
         val password = remember {
             mutableStateOf("")
         }
 
-        OutlinedTextField(value = ipAddress.value, onValueChange = {
-            ipAddress.value = it
-        }, label = { Text(text = "服务器ip")})
-
+//        OutlinedTextField(value = ipAddress.value, onValueChange = {
+//            ipAddress.value = it
+//        }, label = { Text(text = "服务器ip")})
+//
 
         OutlinedTextField(value = username.value, onValueChange = {
             username.value = it
@@ -49,7 +49,7 @@ fun LoginPage(username: MutableState<String> , page: MutableState<Page>) {
         }, label = { Text("密码")})
 
         Button(onClick = {
-            ip = ipAddress.value
+//            ip = ipAddress.value
             coroutineScope.launch {
                 HttpUtils().post<LoginResult>(
                     "/login" ,

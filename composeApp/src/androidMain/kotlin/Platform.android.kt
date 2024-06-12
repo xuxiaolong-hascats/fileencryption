@@ -4,8 +4,8 @@ import org.example.fileencryption.MainActivity
 object AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
 
-    override fun downloadFile(fileName: String) {
-        context?.downloadFile(fileName)
+    override fun downloadFile(userName: String, fileName: String) {
+        context?.downloadFile(userName, fileName)
     }
 
 
@@ -13,8 +13,8 @@ object AndroidPlatform : Platform {
         return context?.downloadPath() ?: ""
     }
 
-    override fun filePath(fileName: String): String {
-        return context?.filePath(fileName) ?: ""
+    override fun uploadFile(fileName: String, targetUserName: String) {
+        context?.uploadFile(fileName, targetUserName)
     }
 
     var context: MainActivity? = null

@@ -17,7 +17,6 @@ object FileUtils {
             } else {
                 path
             }
-            Locale
             val inputStream = FileInputStream(originFilePath)
             val encryptFilePath = path.addEncryptToPath()
             println("encryptExcelAndSave $encryptFilePath")

@@ -23,8 +23,8 @@ import page.DownloadState
 import java.io.File
 import java.io.FileOutputStream
 
-var ip = "127.0.0.1"
-fun baseUrl() = "http://$ip:8000"
+var ip = "101.126.85.58"
+fun baseUrl() = "http://$ip:8080"
 
 class HttpUtils() {
     val httpClient = HttpClient(OkHttp) {
@@ -34,11 +34,7 @@ class HttpUtils() {
             }
         }
         install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                isLenient = true
-                ignoreUnknownKeys = true
-            })
+            json()
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 5000
@@ -104,10 +100,10 @@ class HttpUtils() {
         }.flowOn(Dispatchers.IO)
     }
 
-    inline fun <reified T> downloadFile(filename: String, downloadPath: String, crossinline onCompletion: (Throwable?) -> Unit): Flow<T> {
+    inline fun <reified T> downloadFile(username: String, filename: String, downloadPath: String, crossinline onCompletion: (Throwable?) -> Unit): Flow<T> {
         val outputStream = FileOutputStream(File(downloadPath))
         return flow<T> {
-            val response = httpClient.get("${baseUrl()}/download/$filename")
+            val response = httpClient.get("${baseUrl()}/download/?filename=$filename&username=$username")
             response.bodyAsChannel().toInputStream().copyTo(outputStream)
         }.catch { throwable: Throwable ->
             println("throwable ${throwable.message}")

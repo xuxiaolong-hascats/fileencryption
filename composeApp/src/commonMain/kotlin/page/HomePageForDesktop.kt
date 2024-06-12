@@ -67,6 +67,7 @@ fun DownloadColumn(username: String) {
         LaunchedEffect(null) {
             launch {
                 HttpUtils().get<JsonObject>("/receive/${username}").collect {
+                    println("[receive] $it")
                     Gson().fromJson(it.toString(), ReceiveFiles::class.java)?.receiveFiles?.let {
                         receiveFiles.value = it
                     }
@@ -107,9 +108,9 @@ fun DownloadColumn(username: String) {
                 willDownloadFiles.forEach {
                     println("download file $it")
                     if (PlatFormUtils.isAndroid()) {
-                        PlatFormUtils.androidDownloadFile(it)
+                        PlatFormUtils.androidDownloadFile(username, it)
                     } else {
-                        HttpUtils().downloadFile<DownloadState>(it, it) { cause ->
+                        HttpUtils().downloadFile<DownloadState>(username, it, it) { cause ->
                             println("download file result $cause")
                             coroutineScope.launch{
                                 FileUtils.decryptExcelAndSave(it, listOf())
@@ -199,6 +200,9 @@ fun UploadColumn() {
                 modifier = Modifier.wrapContentSize(),
                 onClick = {
                     coroutineScope.launch {
+                        if (PlatFormUtils.isAndroid()) {
+                            PlatFormUtils.androidUploadFile(excelPath.value, targetUsername.value)
+                        }
                         FileUtils.encryptExcelAndSave(excelPath.value,encryptColumns)?.let { encryptFilePath ->
                             println("upload $encryptFilePath")
                             HttpUtils().uploadExcelFile<UploadState>(targetUsername.value, encryptFilePath) {

@@ -1,10 +1,9 @@
 interface Platform {
     val name: String
 
-    fun downloadFile(fileName: String) {}
+    fun downloadFile(userName: String, fileName: String) {}
 
-    fun filePath(fileName: String): String = ""
-
+    fun uploadFile(fileName: String, targetUserName: String)
     fun downloadPath(): String = ""
 }
 
