@@ -39,6 +39,11 @@ fun HomePageForAndroid(username: String, page: MutableState<Page>) {
             }) {
                 Text("上传")
             }
+            Button(onClick = {
+                page.value = Page.LoginPage
+            }) {
+                Text("退出登录")
+            }
         }
     }
 

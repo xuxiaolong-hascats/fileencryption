@@ -24,6 +24,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
+            implementation("com.google.accompanist:accompanist-permissions:0.35.1-alpha")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

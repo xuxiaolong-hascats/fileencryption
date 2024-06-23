@@ -27,22 +27,18 @@ fun LoginPage(username: MutableState<String> , page: MutableState<Page>) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-//        val ipAddress = remember {
-//            mutableStateOf("")
-//        }
 
-        val password = remember {
-            mutableStateOf("")
-        }
+        val password = remember { mutableStateOf("") }
 
-//        OutlinedTextField(value = ipAddress.value, onValueChange = {
-//            ipAddress.value = it
-//        }, label = { Text(text = "服务器ip")})
-//
+        val errorMsg = remember { mutableStateOf("") }
 
         OutlinedTextField(value = username.value, onValueChange = {
             username.value = it
         }, label = { Text(text = "用户名")})
+
+        if (errorMsg.value.isNotEmpty()) {
+            Text(errorMsg.value)
+        }
 
         OutlinedTextField(value = password.value, onValueChange = {
             password.value = it
@@ -56,18 +52,18 @@ fun LoginPage(username: MutableState<String> , page: MutableState<Page>) {
                     mapOf("username" to username.value, "password" to password.value)
                 ) { throwable ->
                     if (PlatFormUtils.isAndroid()) {
-                        password.value = "Android Error: ${throwable.message}"
+                        errorMsg.value = "Android Error: ${throwable.message}"
                     } else {
-                        password.value = "Desktop Error: ${throwable.message}"
+                        errorMsg.value = "Desktop Error: ${throwable.message}"
                     }
                 }.collect {
                     when (it.state) {
                         0 -> {
-                            password.value = "用户不存在"
+                            errorMsg.value = "用户不存在"
                             println("$TAG: 用户不存在")
                         }
                         1 -> {
-                            password.value = "密码不正确"
+                            errorMsg.value = "密码不正确"
                             println("$TAG: 密码不正确")
                         }
                         2 -> {
@@ -75,7 +71,7 @@ fun LoginPage(username: MutableState<String> , page: MutableState<Page>) {
                             page.value = Page.HomePage
                         }
                         3 -> {
-                            password.value = "后端错误"
+                            errorMsg.value = "后端错误"
                             println("$TAG: 后端错误")
                         }
                     }

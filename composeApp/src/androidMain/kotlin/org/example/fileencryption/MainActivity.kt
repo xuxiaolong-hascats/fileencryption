@@ -2,17 +2,25 @@ package org.example.fileencryption
 
 import AndroidPlatform
 import App
+import android.Manifest
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.Serializable
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -27,39 +35,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        System.setProperty("org.apache.poi.javax.xml.stream.XMLInputFactory", "com.fasterxml.aalto.stax.InputFactoryImpl")
-        System.setProperty("org.apache.poi.javax.xml.stream.XMLOutputFactory", "com.fasterxml.aalto.stax.OutputFactoryImpl")
-        System.setProperty("org.apache.poi.javax.xml.stream.XMLEventFactory", "com.fasterxml.aalto.stax.EventFactoryImpl")
-
         AndroidPlatform.context = this
         setContent {
             App()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            //用户拒绝权限，重新申请
-            if (!Environment.isExternalStorageManager()) {
-                requestManagerPermission();
-            }
-        }
+    override fun onResume() {
+        super.onResume()
+//        requestPermissions(
+//            Manifest.permission.READ_EXTERNAL_STORAGE,
+//            Manifest.permission.WRITE_EXTERNAL_STORAGE
+//        )
     }
 
-    private fun requestManagerPermission() {
-        //当系统在11及以上
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // 没文件管理权限时申请权限
-            if (!Environment.isExternalStorageManager()) {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.setData(Uri.parse("package:" + baseContext.packageName));
-                startActivityForResult(intent, 1);
-            }
-        }
+    private fun requestPermissions(vararg permissions: String) {
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            val failed = result.filter { !it.value }.keys
+            failed.toList()
+        }.launch(arrayOf(*permissions))
     }
 
-    fun downloadFile(userName: String, fileName: String) {
+    fun downloadFile(userName: String, fileName: String, onSuccess:(String) -> Unit) {
         println("Android download file : $userName $fileName")
         val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val cw = ContextWrapper(applicationContext)
@@ -80,18 +77,19 @@ class MainActivity : ComponentActivity() {
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    val inputStream = response.body?.byteStream() ?: return
-                    val outputStream = FileOutputStream(file)
-
                     try {
-                        val buffer = ByteArray(2048)
-                        var len =inputStream.read(buffer)
-                        while(len != -1) {
-                            outputStream.write(buffer, 0, len)
-                            len = inputStream.read(buffer)
+                        Gson().fromJson(response.body?.string(), DownloadResult::class.java)?.run {
+                            if (state == 0) {
+                                println("Android download file error state == 0, message $message")
+                            }
+                            val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                            val file = File(directory, fileName)
+                            content?.let {
+                                file.writeText(content)
+                                onSuccess(fileName)
+                                println("Android download file success, file path: ${"$directory/$fileName"}")
+                            }
                         }
-                        outputStream.flush()
-                        println("Android download file success, file path: ${"$directory/$fileName"}")
                     } catch (e: Exception) {
                         println("Android download file write error ${e.message}")
                     }
@@ -101,14 +99,26 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    @Serializable
+    class DownloadResult(
+        @SerializedName("state")
+        val state: Int? = null,
+        @SerializedName("filename")
+        val filename: String? = null,
+        @SerializedName("content")
+        val content: String? = null,
+        @SerializedName("message")
+        val message: String? = null
+    )
+
     fun downloadPath(): String {
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
     }
 
     fun uploadFile(fileName: String, targetUserName: String): String {
-        val path =  Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path + "/" + fileName
-        println("Android upload path: $path")
-        val file = File(path)
+//        val path =  Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path + "/" + fileName
+        println("Android upload path: $fileName")
+        val file = File(fileName)
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -131,7 +141,7 @@ class MainActivity : ComponentActivity() {
 
             }
         )
-        return path
+        return fileName
     }
 
     fun privateEncryption() {

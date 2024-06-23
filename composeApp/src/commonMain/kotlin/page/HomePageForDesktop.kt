@@ -108,7 +108,9 @@ fun DownloadColumn(username: String) {
                 willDownloadFiles.forEach {
                     println("download file $it")
                     if (PlatFormUtils.isAndroid()) {
-                        PlatFormUtils.androidDownloadFile(username, it)
+                        PlatFormUtils.androidDownloadFile(username, it) { downloadName ->
+                            receiveFiles.value = receiveFiles.value.filter { it != downloadName }
+                        }
                     } else {
                         HttpUtils().downloadFile<DownloadState>(username, it, it) { cause ->
                             println("download file result $cause")
@@ -139,8 +141,6 @@ fun UploadColumn() {
         val coroutineScope = rememberCoroutineScope()
         val excelPath = remember { mutableStateOf("") }
         val targetUsername = remember { mutableStateOf("") }
-        val excelColumns = remember { mutableStateListOf<String>() }
-        val encryptColumns = remember { mutableListOf<String>() }
         Text("上传文件给其他用户", color = Color.Magenta)
         Row {
             TextField(value = excelPath.value,
@@ -149,43 +149,13 @@ fun UploadColumn() {
                 } ,onValueChange = {
                     excelPath.value = it
                 })
-            Button(onClick = {
-                coroutineScope.launch {
-                    excelColumns.clear()
-                    excelColumns.addAll(FileUtils.getExcelColumns(excelPath.value))
+            if (PlatFormUtils.isAndroid()) {
+                PlatFormUtils.androidPickFile{
+                    excelPath.value = it
+                    println("androidPickFile] $it")
                 }
-            }){
-                Text("确认加密字段")
             }
         }
-
-        Column{
-            Column(
-                modifier = Modifier.border(2.dp, Color.Black, shape = RoundedCornerShape(2.dp))
-                    .height(200.dp)
-                    .verticalScroll(rememberScrollState())
-            ) { excelColumns.forEach {
-                Row {
-                    val currentColumnName = remember { mutableStateOf(it) }
-                    val checked = remember { mutableStateOf(false) }
-                    Text(
-                        text = it,
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .offset(x = 2.dp)
-                    )
-                    Checkbox(checked = checked.value, onCheckedChange = {
-                        checked.value = it
-                        if (it) {
-                            encryptColumns.add(currentColumnName.value)
-                        } else {
-                            encryptColumns.remove(currentColumnName.value)
-                        }
-                    })
-                }
-            } }
-        }
-
 
         Row {
             TextField(
@@ -202,11 +172,10 @@ fun UploadColumn() {
                     coroutineScope.launch {
                         if (PlatFormUtils.isAndroid()) {
                             PlatFormUtils.androidUploadFile(excelPath.value, targetUsername.value)
-                        }
-                        FileUtils.encryptExcelAndSave(excelPath.value,encryptColumns)?.let { encryptFilePath ->
-                            println("upload $encryptFilePath")
-                            HttpUtils().uploadExcelFile<UploadState>(targetUsername.value, encryptFilePath) {
-                                println("upload ${encryptFilePath}: " + it.message)
+                        } else {
+                            println("upload ${excelPath.value}")
+                            HttpUtils().uploadExcelFile<UploadState>(targetUsername.value, excelPath.value) {
+                                println("upload ${excelPath.value}: " + it.message)
                             }.collect {
                                 when (it.state) {
                                     1 -> {
@@ -216,6 +185,7 @@ fun UploadColumn() {
                                 }
                             }
                         }
+
                     }
                 }) {
                 Text(text = "加密并发送")
@@ -226,6 +196,8 @@ fun UploadColumn() {
     }
 
 }
+
+
 
 @Serializable
 class UploadState(
