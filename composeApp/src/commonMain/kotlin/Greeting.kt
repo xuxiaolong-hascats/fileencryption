@@ -36,7 +36,7 @@ object PlatFormUtils {
     }
 
     @Composable
-    fun androidPickFile(callBack: (filePath: String)->Unit) {
+    fun androidPickFile(callBack: (filePath: String, String)->Unit) {
         if (isAndroid()) {
             platform.PickFile(callBack)
         }

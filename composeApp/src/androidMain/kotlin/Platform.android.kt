@@ -20,7 +20,7 @@ object AndroidPlatform : Platform {
     }
 
     @Composable
-    override fun PickFile(callBack: (filePath: String)->Unit) {
+    override fun PickFile(callBack: (String, String)->Unit) {
         return PickSth(callBack)
     }
 

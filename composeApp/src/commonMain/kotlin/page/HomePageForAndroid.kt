@@ -32,12 +32,12 @@ fun HomePageForAndroid(username: String, page: MutableState<Page>) {
             Button(onClick = {
                 isDownloadPage.value = true
             }) {
-                Text("下载")
+                Text("下载页")
             }
             Button(onClick = {
                 isDownloadPage.value = false
             }) {
-                Text("上传")
+                Text("上传页")
             }
             Button(onClick = {
                 page.value = Page.LoginPage

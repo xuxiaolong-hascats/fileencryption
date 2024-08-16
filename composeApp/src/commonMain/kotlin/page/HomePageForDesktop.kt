@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -18,8 +19,10 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import utils.AESCrypt
 import utils.FileUtils
 import utils.HttpUtils
+import java.io.File
 
 @Composable
 fun HomePageForDeskTop(username: String, page: MutableState<Page>) {
@@ -140,6 +143,7 @@ fun UploadColumn() {
     ) {
         val coroutineScope = rememberCoroutineScope()
         val excelPath = remember { mutableStateOf("") }
+        val fileContent = remember { mutableStateOf("") }
         val targetUsername = remember { mutableStateOf("") }
         Text("上传文件给其他用户", color = Color.Magenta)
         Row {
@@ -150,12 +154,41 @@ fun UploadColumn() {
                     excelPath.value = it
                 })
             if (PlatFormUtils.isAndroid()) {
-                PlatFormUtils.androidPickFile{
-                    excelPath.value = it
-                    println("androidPickFile] $it")
+                PlatFormUtils.androidPickFile { path, content ->
+                    excelPath.value = path
+                    fileContent.value = content
+                    println("[androidPickFile] $path")
                 }
             }
         }
+
+
+        if (fileContent.value.isNotEmpty()) {
+            Text(
+                text = "原文:"
+            )
+
+            Text(
+                text = fileContent.value,
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .border(width = 2.dp, color = Color.Black)
+                    .padding(5.dp)
+            )
+
+            Text(
+                text = "加密预览："
+            )
+
+            Text(
+                text = AESCrypt.aesEncryptSimple(fileContent.value),
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .border(width = 2.dp, color = Color.Black)
+                    .padding(5.dp)
+            )
+        }
+
 
         Row {
             TextField(
@@ -179,6 +212,7 @@ fun UploadColumn() {
                             }.collect {
                                 when (it.state) {
                                     1 -> {
+                                        fileContent.value = ""
                                         println("${it.filename} upload succeed.")
                                     }
                                     else -> {}

@@ -33,7 +33,7 @@ import java.io.OutputStream
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun PickSth(callBack: (filePath: String)->Unit) {
+fun PickSth(callBack: (filePath: String, String)-> Unit) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == Activity.RESULT_OK) {
@@ -44,7 +44,7 @@ fun PickSth(callBack: (filePath: String)->Unit) {
                         val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                         val fileName = uri.path?.split("/")?.last()
                         val file = File(directory, fileName)
-                        callBack(file.path)
+                        callBack(file.path, file.readText())
 
                     }
                 }

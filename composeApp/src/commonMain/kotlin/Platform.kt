@@ -9,7 +9,7 @@ interface Platform {
     fun downloadPath(): String = ""
 
     @Composable
-    fun PickFile(callBack: (filePath: String)->Unit){}
+    fun PickFile(callBack: (String, String)->Unit){}
 }
 
 expect fun getPlatform(): Platform

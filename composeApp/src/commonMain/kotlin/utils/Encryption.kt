@@ -2,6 +2,7 @@ package utils
 
 import java.util.*
 import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 
 object AESCrypt{
@@ -19,6 +20,41 @@ object AESCrypt{
         val result = Base64.getEncoder().encode(encrypt)
 
         return String(result)
+    }
+
+    fun aesEncryptSimple(text: String): String {
+        try {
+            val keyGenerator = KeyGenerator.getInstance("AES")
+            keyGenerator.init(128)
+            val secretKey = keyGenerator.generateKey()
+
+            val cipher = Cipher.getInstance("AES")
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+
+            val encryptedBytes = cipher.doFinal(text.toByteArray())
+            return Base64.getEncoder().encodeToString(encryptedBytes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return ""
+        }
+    }
+
+    fun aesDecrypt(encryptedText: String): String {
+        try {
+            val keyGenerator = KeyGenerator.getInstance("AES")
+            keyGenerator.init(128)
+            val secretKey = keyGenerator.generateKey()
+
+            val cipher = Cipher.getInstance("AES")
+            cipher.init(Cipher.DECRYPT_MODE, secretKey)
+
+            val encryptedBytes = Base64.getDecoder().decode(encryptedText)
+            val decryptedBytes = cipher.doFinal(encryptedBytes)
+            return String(decryptedBytes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return ""
+        }
     }
 
     //AES解密
