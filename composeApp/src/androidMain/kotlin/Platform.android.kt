@@ -15,8 +15,8 @@ object AndroidPlatform : Platform {
         return context?.downloadPath() ?: ""
     }
 
-    override fun uploadFile(fileName: String, targetUserName: String) {
-        context?.uploadFile(fileName, targetUserName)
+    override fun uploadFile(fileName: String, targetUserName: String, onSuccess: () -> Unit) {
+        context?.uploadFile(fileName, targetUserName, onSuccess)
     }
 
     @Composable

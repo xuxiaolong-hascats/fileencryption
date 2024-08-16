@@ -23,9 +23,9 @@ object PlatFormUtils {
     }
 
 
-    fun androidUploadFile(fileName: String, targetUserName: String) {
+    fun androidUploadFile(fileName: String, targetUserName: String, onSuccess: () -> Unit) {
         if (isAndroid()) {
-            platform.uploadFile(fileName, targetUserName)
+            platform.uploadFile(fileName, targetUserName, onSuccess)
         }
     }
 

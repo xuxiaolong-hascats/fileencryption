@@ -1,6 +1,7 @@
 package page
 
 import PlatFormUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,9 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
@@ -67,6 +70,9 @@ fun DownloadColumn(username: String) {
         val coroutineScope = rememberCoroutineScope()
         val receiveFiles = remember { mutableStateOf<List<String>>(listOf()) }
         val willDownloadFiles = remember { mutableListOf<String>() }
+        val openDialog = remember { mutableStateOf(false) }
+        val dialogState = remember { mutableStateOf("") }
+        BaseDialog(openDialog = openDialog, dialogState = dialogState)
         LaunchedEffect(null) {
             launch {
                 HttpUtils().get<JsonObject>("/receive/${username}").collect {
@@ -78,56 +84,69 @@ fun DownloadColumn(username: String) {
             }
         }
         Text("我的待下载文件", color = Color.Magenta)
-        Column(
-            modifier = Modifier.border(2.dp, Color.Black, shape = RoundedCornerShape(2.dp))
-        ) {
-            receiveFiles.value.forEach {
-                Row {
-                    val currentFile = remember { mutableStateOf(it) }
-                    val checked = remember { mutableStateOf(false) }
-                    Text(
-                        text = it,
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .offset(x = 2.dp)
-                    )
-                    Checkbox(checked = checked.value, onCheckedChange = {
-                        checked.value = it
-                        if (it) {
-                            willDownloadFiles.add(currentFile.value)
-                        } else {
-                            willDownloadFiles.remove(currentFile.value)
-                        }
-                    })
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            Column(
+                modifier = Modifier.border(2.dp, Color.Black, shape = RoundedCornerShape(2.dp)),
+            ) {
+                receiveFiles.value.forEach {
+                    Row {
+                        val currentFile = remember { mutableStateOf(it) }
+                        val checked = remember { mutableStateOf(false) }
+                        Text(
+                            text = it,
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .offset(x = 2.dp)
+                        )
+                        Checkbox(checked = checked.value, onCheckedChange = {
+                            checked.value = it
+                            if (it) {
+                                willDownloadFiles.add(currentFile.value)
+                            } else {
+                                willDownloadFiles.remove(currentFile.value)
+                            }
+                        })
+                    }
                 }
             }
-        }
 
-        Button(onClick = {
-            if (willDownloadFiles.isEmpty()) {
-                println("没有可下载的文件")
-            }
-            coroutineScope.launch {
-                willDownloadFiles.forEach {
-                    println("download file $it")
-                    if (PlatFormUtils.isAndroid()) {
-                        PlatFormUtils.androidDownloadFile(username, it) { downloadName ->
-                            receiveFiles.value = receiveFiles.value.filter { it != downloadName }
-                        }
-                    } else {
-                        HttpUtils().downloadFile<DownloadState>(username, it, it) { cause ->
-                            println("download file result $cause")
-                            coroutineScope.launch{
-                                FileUtils.decryptExcelAndSave(it, listOf())
+            Button(onClick = {
+                if (willDownloadFiles.isEmpty()) {
+                    println("没有可下载的文件")
+                }
+                openDialog.value = !openDialog.value
+                dialogState.value = "下载中..."
+                coroutineScope.launch {
+                    delay(timeMillis = 1000)
+                    willDownloadFiles.forEach {
+                        println("download file $it")
+                        if (PlatFormUtils.isAndroid()) {
+                            PlatFormUtils.androidDownloadFile(username, it) { downloadName ->
+                                receiveFiles.value = receiveFiles.value.filter { it != downloadName }
+                            }
+                        } else {
+                            HttpUtils().downloadFile<DownloadState>(username, it, it) { cause ->
+                                println("download file result $cause")
+                                coroutineScope.launch{
+                                    FileUtils.decryptExcelAndSave(it, listOf())
+                                }
                             }
                         }
-                    }
 
+                    }
+                    dialogState.value = "下载并解密完成!"
                 }
+            }) {
+                Text(text = "下载并解密")
             }
-        }) {
-            Text(text = "下载并解密")
         }
+
+
+
 
     }
 
@@ -145,6 +164,9 @@ fun UploadColumn() {
         val excelPath = remember { mutableStateOf("") }
         val fileContent = remember { mutableStateOf("") }
         val targetUsername = remember { mutableStateOf("") }
+        val openDialog = remember { mutableStateOf(false) }
+        val dialogState = remember { mutableStateOf("") }
+        BaseDialog(openDialog = openDialog, dialogState = dialogState)
         Text("上传文件给其他用户", color = Color.Magenta)
         Row {
             TextField(value = excelPath.value,
@@ -202,9 +224,17 @@ fun UploadColumn() {
             Button(
                 modifier = Modifier.wrapContentSize(),
                 onClick = {
+                    dialogState.value = "加密中..."
+                    openDialog.value = !openDialog.value
                     coroutineScope.launch {
                         if (PlatFormUtils.isAndroid()) {
-                            PlatFormUtils.androidUploadFile(excelPath.value, targetUsername.value)
+                            delay(timeMillis = 1000)
+                            PlatFormUtils.androidUploadFile(excelPath.value, targetUsername.value) {
+                                fileContent.value = ""
+                                dialogState.value = "传输完成！"
+                                excelPath.value = ""
+                                targetUsername.value = ""
+                            }
                         } else {
                             println("upload ${excelPath.value}")
                             HttpUtils().uploadExcelFile<UploadState>(targetUsername.value, excelPath.value) {
@@ -212,7 +242,6 @@ fun UploadColumn() {
                             }.collect {
                                 when (it.state) {
                                     1 -> {
-                                        fileContent.value = ""
                                         println("${it.filename} upload succeed.")
                                     }
                                     else -> {}
@@ -229,6 +258,18 @@ fun UploadColumn() {
 
     }
 
+}
+
+@Composable
+fun BaseDialog(openDialog:MutableState<Boolean>, dialogState: MutableState<String>){
+    if(openDialog.value){
+        Dialog(onDismissRequest = { openDialog.value = false } ,) {
+            Text(text = dialogState.value,
+                modifier = Modifier
+                .size(200.dp, 50.dp)
+                .background(Color.Gray))
+        }
+    }
 }
 
 

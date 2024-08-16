@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
     }
 
-    fun uploadFile(fileName: String, targetUserName: String): String {
+    fun uploadFile(fileName: String, targetUserName: String, onSuccess: () -> Unit): String {
 //        val path =  Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path + "/" + fileName
         println("Android upload path: $fileName")
         val file = File(fileName)
@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 override fun onResponse(call: Call, response: Response) {
+                    onSuccess()
                     println("Android[uploadFile] onResponse ${response.message}")
                 }
 

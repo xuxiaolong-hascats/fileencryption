@@ -5,7 +5,7 @@ interface Platform {
 
     fun downloadFile(userName: String, fileName: String, onSuccess: (String) -> Unit) {}
 
-    fun uploadFile(fileName: String, targetUserName: String)
+    fun uploadFile(fileName: String, targetUserName: String, onSuccess: () -> Unit)
     fun downloadPath(): String = ""
 
     @Composable
