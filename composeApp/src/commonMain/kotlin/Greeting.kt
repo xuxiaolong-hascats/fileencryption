@@ -1,4 +1,5 @@
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import okhttp3.internal.platform.Android10Platform
 
 class Greeting {
@@ -16,9 +17,15 @@ object PlatFormUtils {
         return platform.name.startsWith("Android")
     }
 
-    fun androidDownloadFile(userName: String, fileName: String, onSuccess: (String) -> Unit) {
+    fun androidDownloadFile(userName: String, fileName: String,  excel :Boolean, onSuccess: (String) -> Unit) {
         if (isAndroid()) {
-            platform.downloadFile(userName, fileName, onSuccess)
+            platform.downloadFile(userName, fileName, excel, onSuccess)
+        }
+    }
+
+    fun androidGetFileContent(userName: String, fileName: String, onSuccess: (String, String) -> Unit) {
+        if (isAndroid()) {
+            platform.getFileContent(userName, fileName, onSuccess)
         }
     }
 
@@ -33,6 +40,13 @@ object PlatFormUtils {
         return if (isAndroid()) {
             platform.downloadPath()
         } else ""
+    }
+
+    @Composable
+    fun image(name: String, modifier: Modifier) {
+        if (isAndroid()) {
+            platform.image(name, modifier)
+        }
     }
 
     @Composable

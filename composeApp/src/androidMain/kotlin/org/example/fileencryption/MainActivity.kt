@@ -15,7 +15,10 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
@@ -24,8 +27,12 @@ import kotlinx.serialization.Serializable
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import page.toTable
+import utils.AESCrypt
 import utils.baseUrl
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 
@@ -56,7 +63,7 @@ class MainActivity : ComponentActivity() {
         }.launch(arrayOf(*permissions))
     }
 
-    fun downloadFile(userName: String, fileName: String, onSuccess:(String) -> Unit) {
+    fun downloadFile(userName: String, fileName: String, excel :Boolean = false, onSuccess:(String) -> Unit) {
         println("Android download file : $userName $fileName")
         val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val cw = ContextWrapper(applicationContext)
@@ -83,11 +90,54 @@ class MainActivity : ComponentActivity() {
                                 println("Android download file error state == 0, message $message")
                             }
                             val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                            val file = File(directory, fileName)
-                            content?.let {
-                                file.writeText(content)
-                                onSuccess(fileName)
-                                println("Android download file success, file path: ${"$directory/$fileName"}")
+                            if (excel) {
+                                content?.let {
+                                    val file = File(directory, fileName.split('.').first() + ".xlsx")
+                                    dowloadToExcel(file, it.toTable())
+                                    onSuccess(fileName)
+                                    println("Android download file success, file path: ${"$directory/$fileName"}(XLSX)")
+                                }
+                            } else {
+                                val file = File(directory, fileName)
+                                content?.let {
+                                    file.writeText(it)
+                                    onSuccess(fileName)
+                                    println("Android download file success, file path: ${"$directory/$fileName"}")
+                                }
+                            }
+
+                        }
+                    } catch (e: Exception) {
+                        println("Android download file write error ${e.message}")
+                    }
+                }
+
+            }
+        )
+    }
+
+    fun getFileContent(userName: String, fileName: String, onSuccess:(String, String) -> Unit) {
+        println("Android get file content : $userName $fileName")
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .get()
+            .url(baseUrl() + "/download/?filename=$fileName&username=$userName")
+            .build()
+        val call = client.newCall(request)
+        call.enqueue(
+            object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    println("Android download file onFailure ${e.message}")
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    try {
+                        Gson().fromJson(response.body?.string(), DownloadResult::class.java)?.run {
+                            if (state == 0) {
+                                println("Android download file error state == 0, message $message")
+                            }
+                            if (content != null) {
+                                onSuccess(content, encryptContent!!)
                             }
                         }
                     } catch (e: Exception) {
@@ -99,6 +149,33 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    fun dowloadToExcel(file:File, content:List<List<String>> ) {
+        val outputStream = FileOutputStream(file)
+        val workbook = XSSFWorkbook()
+        val sheet = workbook.createSheet("Sheet1")
+
+        for (i in 0 until content.size - 1) {
+            val row = content.get(i)
+            for (j in 0 until row.size) {
+                val row = if (sheet.getRow(i) == null) {
+                    sheet.createRow(i)
+                } else sheet.getRow(i)
+                val cell = if (row.getCell(j) == null) {
+                    row.createCell(j)
+                } else row.getCell(j)
+                cell.setCellValue(AESCrypt.aesEncryptSimple(content[i][j]))
+                print("\t")
+            }
+            println()
+        }
+
+        workbook.write(outputStream)
+        workbook.close()
+        outputStream.flush()
+        outputStream.close()
+
+    }
+
     @Serializable
     class DownloadResult(
         @SerializedName("state")
@@ -107,6 +184,8 @@ class MainActivity : ComponentActivity() {
         val filename: String? = null,
         @SerializedName("content")
         val content: String? = null,
+        @SerializedName("encrypt_content")
+        val encryptContent: String? = null,
         @SerializedName("message")
         val message: String? = null
     )
@@ -146,6 +225,23 @@ class MainActivity : ComponentActivity() {
     }
 
     fun privateEncryption() {
+    }
+
+    @Composable
+    fun image(name : String, modifier: Modifier) {
+        when (name) {
+            "main_page_img" -> Image(
+                painter = painterResource(R.drawable.main_page_img),
+                contentDescription = "主页图片1",
+                modifier = modifier
+            )
+            "main_page_img2" -> Image(
+                painter = painterResource(R.drawable.main_page_img2),
+                contentDescription = "主页图片2",
+                modifier = modifier
+            )
+            else -> {}
+        }
     }
 }
 

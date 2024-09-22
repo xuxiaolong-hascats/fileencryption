@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -20,6 +21,7 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import utils.AESCrypt
@@ -63,7 +65,7 @@ fun HomePageForDeskTop(username: String, page: MutableState<Page>) {
 @Composable
 fun DownloadColumn(username: String) {
     Column(
-        modifier = Modifier.height(300.dp),
+        modifier = Modifier.wrapContentHeight(),
         verticalArrangement = Arrangement.SpaceAround,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -72,6 +74,8 @@ fun DownloadColumn(username: String) {
         val willDownloadFiles = remember { mutableListOf<String>() }
         val openDialog = remember { mutableStateOf(false) }
         val dialogState = remember { mutableStateOf("") }
+        val lastPreviewFile = remember { mutableStateOf("") }
+        val lastPreviewFileEncrypt = remember { mutableStateOf("") }
         BaseDialog(openDialog = openDialog, dialogState = dialogState)
         LaunchedEffect(null) {
             launch {
@@ -106,13 +110,25 @@ fun DownloadColumn(username: String) {
                             checked.value = it
                             if (it) {
                                 willDownloadFiles.add(currentFile.value)
+                                PlatFormUtils.androidGetFileContent(username, currentFile.value) { o, e ->
+                                    lastPreviewFile.value = o
+                                    lastPreviewFileEncrypt.value = e
+                                }
                             } else {
                                 willDownloadFiles.remove(currentFile.value)
+                                if (willDownloadFiles.isEmpty()) {
+                                    lastPreviewFile.value = ""
+                                    lastPreviewFileEncrypt.value = ""
+                                }
                             }
                         })
                     }
                 }
+
+
             }
+
+
 
             Button(onClick = {
                 if (willDownloadFiles.isEmpty()) {
@@ -122,28 +138,62 @@ fun DownloadColumn(username: String) {
                 dialogState.value = "下载中..."
                 coroutineScope.launch {
                     delay(timeMillis = 1000)
-                    willDownloadFiles.forEach {
-                        println("download file $it")
+                    willDownloadFiles.forEach {path ->
+                        println("download file $path")
                         if (PlatFormUtils.isAndroid()) {
-                            PlatFormUtils.androidDownloadFile(username, it) { downloadName ->
+                            PlatFormUtils.androidDownloadFile(username, path, excel = true) { downloadName ->
                                 receiveFiles.value = receiveFiles.value.filter { it != downloadName }
                             }
                         } else {
-                            HttpUtils().downloadFile<DownloadState>(username, it, it) { cause ->
+                            HttpUtils().downloadFile<DownloadState>(username, path, path) { cause ->
                                 println("download file result $cause")
                                 coroutineScope.launch{
-                                    FileUtils.decryptExcelAndSave(it, listOf())
+                                    FileUtils.decryptExcelAndSave(path, listOf())
                                 }
                             }
                         }
 
                     }
-                    dialogState.value = "下载并解密完成!"
+                    dialogState.value = "下载完成!"
                 }
             }) {
-                Text(text = "下载并解密")
+                Text(text = "下载")
             }
         }
+
+        Spacer(modifier = Modifier.width(5.dp))
+
+
+        if (lastPreviewFile.value.isNotEmpty()) {
+            Text(
+                text = "密文:"
+            )
+
+            Text(
+                text = lastPreviewFileEncrypt.value,
+                modifier = Modifier
+                    .heightIn(max = 250.dp)
+                    .border(width = 2.dp, color = Color.Black)
+                    .padding(5.dp),
+                overflow = TextOverflow.Ellipsis
+
+            )
+
+            Text(
+                text = "解密信息："
+            )
+
+            Text(
+                text = lastPreviewFile.value,
+                modifier = Modifier
+                    .heightIn(min= 250.dp, max = 250.dp)
+                    .border(width = 2.dp, color = Color.Black)
+                    .padding(5.dp),
+                overflow = TextOverflow.Ellipsis
+
+            )
+        }
+
 
 
 
@@ -167,7 +217,7 @@ fun UploadColumn() {
         val openDialog = remember { mutableStateOf(false) }
         val dialogState = remember { mutableStateOf("") }
         BaseDialog(openDialog = openDialog, dialogState = dialogState)
-        Text("上传文件给其他用户", color = Color.Magenta)
+        Text("发送文件给其他用户", color = Color.Magenta)
         Row {
             TextField(value = excelPath.value,
                 placeholder = {
@@ -193,9 +243,10 @@ fun UploadColumn() {
             Text(
                 text = fileContent.value,
                 modifier = Modifier
-                    .wrapContentHeight()
+                    .heightIn(max = 250.dp)
                     .border(width = 2.dp, color = Color.Black)
-                    .padding(5.dp)
+                    .padding(5.dp),
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(
@@ -205,9 +256,10 @@ fun UploadColumn() {
             Text(
                 text = AESCrypt.aesEncryptSimple(fileContent.value),
                 modifier = Modifier
-                    .wrapContentHeight()
+                    .heightIn(max = 250.dp)
                     .border(width = 2.dp, color = Color.Black)
-                    .padding(5.dp)
+                    .padding(5.dp),
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -251,7 +303,7 @@ fun UploadColumn() {
 
                     }
                 }) {
-                Text(text = "加密并发送")
+                Text(text = "加密传输")
             }
         }
 
@@ -292,3 +344,8 @@ class ReceiveFiles(
     @SerializedName("receive_files")
     val receiveFiles: List<String>? = null
 )
+
+
+fun String.toTable():List<List<String>> {
+    return this.split('\n').map { it.split('\t') }
+}

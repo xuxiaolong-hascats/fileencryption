@@ -15,7 +15,7 @@ fun HomePageForAndroid(username: String, page: MutableState<Page>) {
         modifier = Modifier.fillMaxWidth().fillMaxHeight(),
     ) {
 
-        val isDownloadPage = remember { mutableStateOf(true) }
+        val isDownloadPage = remember { mutableStateOf(false) }
 
         if (isDownloadPage.value) {
             DownloadColumn(username)
@@ -23,21 +23,21 @@ fun HomePageForAndroid(username: String, page: MutableState<Page>) {
         } else {
             UploadColumn()
         }
-
+        Spacer(modifier = Modifier.weight(1f))
         Row(
             modifier = Modifier.height(40.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.Bottom
         ) {
             Button(onClick = {
-                isDownloadPage.value = true
-            }) {
-                Text("下载页")
-            }
-            Button(onClick = {
                 isDownloadPage.value = false
             }) {
-                Text("上传页")
+                Text("发送页")
+            }
+            Button(onClick = {
+                isDownloadPage.value = true
+            }) {
+                Text("接收页")
             }
             Button(onClick = {
                 page.value = Page.LoginPage

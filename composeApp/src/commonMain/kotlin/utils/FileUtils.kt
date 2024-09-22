@@ -10,45 +10,35 @@ import java.io.FileOutputStream
 
 object FileUtils {
 
-    suspend fun encryptExcelAndSave(path: String, encryptColumns: List<String>) = withContext(Dispatchers.IO) {
-        return@withContext runCatching<String?> {
-            val originFilePath = if (PlatFormUtils.isAndroid()) {
+    suspend fun download2Excel(path: String, content: List<List<String>>, onSuccess: (String) -> Unit) = withContext(Dispatchers.IO) {
+        return@withContext runCatching {
+            var originFilePath = if (PlatFormUtils.isAndroid()) {
                 PlatFormUtils.androidDownloadPath() + "/$path"
             } else {
                 path
             }
+            originFilePath = originFilePath.split('.').first() + ".xlsx"
             val inputStream = FileInputStream(originFilePath)
-            val encryptFilePath = path.addEncryptToPath()
-            println("encryptExcelAndSave $encryptFilePath")
-            val outputStream = FileOutputStream(encryptFilePath)
+            val outputStream = FileOutputStream(originFilePath)
             val workbook = XSSFWorkbook(inputStream)
             val sheet = workbook.getSheetAt(0)
-            val rows = sheet.physicalNumberOfRows
-            val headerIndex = sheet.getRow(0).mapIndexedNotNull { index, cell ->
-                if (cell.stringCellValue in encryptColumns) {
-                    index
-                } else {
-                    null
-                }
-            }
 
-            for (i in 1 until rows) { //  除了标题都加密
-                val row = sheet.getRow(i)
-                headerIndex.forEach {
-                    val cell = row.getCell(it)
-                    print("${cell}\t")
-                    cell.setCellValue(AESCrypt.encrypt(cell.stringCellValue, "1234567887654321"))
-                    print("${cell}\t")
+            for (i in 0 until content.size) {
+                val row = content.get(i)
+                for (j in 0 until row.size) {
+                    sheet.getRow(i).getCell(j).setCellValue(content[i][j])
+                    print("\t")
                 }
                 println()
             }
+
             workbook.write(outputStream)
             outputStream.flush()
             outputStream.close()
             workbook.close()
-            encryptFilePath
+            onSuccess(path)
         }.getOrElse {
-            println("encryptExcelAndSave error：" + it.message)
+            println("download2Excel error：" + it.message)
             null
         }
 
